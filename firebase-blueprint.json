@@ -1,0 +1,53 @@
+{
+  "entities": {
+    "Post": {
+      "title": "Post",
+      "description": "A knowledge sharing post or project",
+      "type": "object",
+      "properties": {
+        "title": { "type": "string", "description": "Title of the post" },
+        "content": { "type": "string", "description": "Markdown content" },
+        "category": { "type": "string", "description": "Category (e.g., Statistics, Planning, Data Science)" },
+        "createdAt": { "type": "string", "format": "date-time", "description": "Creation timestamp" },
+        "authorUid": { "type": "string", "description": "UID of the author" }
+      },
+      "required": ["title", "content", "category", "createdAt", "authorUid"]
+    },
+    "User": {
+      "title": "User",
+      "description": "User profile (admin only)",
+      "type": "object",
+      "properties": {
+        "email": { "type": "string", "format": "email" },
+        "role": { "type": "string", "enum": ["admin", "user"] }
+      },
+      "required": ["email", "role"]
+    },
+    "Settings": {
+      "title": "Settings",
+      "description": "Global application settings",
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "facebook": { "type": "string" },
+        "whatsapp": { "type": "string" },
+        "gmail": { "type": "string" }
+      },
+      "required": ["name"]
+    }
+  },
+  "firestore": {
+    "posts": {
+      "schema": { "$ref": "Post" },
+      "description": "Collection of knowledge sharing posts"
+    },
+    "users": {
+      "schema": { "$ref": "User" },
+      "description": "Admin user profiles"
+    },
+    "settings": {
+      "schema": { "$ref": "Settings" },
+      "description": "Global site settings"
+    }
+  }
+}
