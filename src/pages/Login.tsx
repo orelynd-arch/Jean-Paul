@@ -27,7 +27,7 @@ export default function Login({ user }: { user: User | null }) {
         if (result) {
           const userEmail = result.user.email?.toLowerCase();
           if (userEmail !== 'orelynd@gmail.com') {
-            setError("Accès refusé. Vous n'êtes pas l'administrateur de ce site.");
+            setError(`Accès refusé. L'email ${userEmail} n'est pas autorisé.`);
             await auth.signOut();
           } else {
             navigate('/admin');
@@ -35,7 +35,11 @@ export default function Login({ user }: { user: User | null }) {
         }
       } catch (err: any) {
         console.error(err);
-        setError("Une erreur est survenue lors de la connexion.");
+        if (err.code === 'auth/internal-error' || err.code === 'auth/network-request-failed') {
+          setError("Erreur réseau. Veuillez vérifier votre connexion.");
+        } else {
+          setError("Une erreur est survenue lors de la connexion.");
+        }
       } finally {
         setRedirectLoading(false);
       }
@@ -90,6 +94,14 @@ export default function Login({ user }: { user: User | null }) {
                   <ShieldAlert className="w-5 h-5 shrink-0" />
                   {error}
                 </motion.div>
+              )}
+
+              {user && !isAdmin && (
+                <div className="mb-8 p-4 bg-white/5 rounded-xl text-center">
+                  <p className="text-sm text-gray-400 mb-1">Connecté en tant que :</p>
+                  <p className="font-medium text-white">{user.email}</p>
+                  <p className="text-xs text-red-400 mt-2">Cet email n'est pas autorisé.</p>
+                </div>
               )}
 
               <button
