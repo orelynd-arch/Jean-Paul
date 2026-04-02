@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from 'firebase/auth';
-import { auth, signInWithRedirect, signInWithPopup, getRedirectResult, googleProvider } from '../firebase';
+import { auth, signInWithRedirect, signInWithPopup, getRedirectResult, googleProvider, signOut } from '../firebase';
 import { motion } from 'motion/react';
-import { BarChart3, LogIn, ShieldAlert, Loader2, ChevronRight, ArrowLeft } from 'lucide-react';
+import { BarChart3, LogIn, ShieldAlert, Loader2, ChevronRight, ArrowLeft, LogOut } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export default function Login({ user }: { user: User | null }) {
@@ -134,7 +134,14 @@ export default function Login({ user }: { user: User | null }) {
                 <div className="mb-8 p-4 bg-white/5 rounded-xl text-center">
                   <p className="text-sm text-gray-400 mb-1">Connecté en tant que :</p>
                   <p className="font-medium text-white">{user.email}</p>
-                  <p className="text-xs text-red-400 mt-2">Cet email n'est pas autorisé.</p>
+                  <p className="text-xs text-red-400 mt-2 mb-4">Cet email n'est pas autorisé.</p>
+                  <button
+                    onClick={() => signOut(auth)}
+                    className="text-xs text-blue-400 hover:underline flex items-center justify-center gap-2 mx-auto"
+                  >
+                    <LogOut className="w-3 h-3" />
+                    Se déconnecter et changer de compte
+                  </button>
                 </div>
               )}
 
