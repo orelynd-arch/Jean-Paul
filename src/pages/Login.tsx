@@ -12,6 +12,7 @@ export default function Login({ user }: { user: User | null }) {
   const [redirectLoading, setRedirectLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [useRedirect, setUseRedirect] = useState(true);
+  const [showDebug, setShowDebug] = useState(false);
 
   const isAdmin = user?.email?.toLowerCase() === 'orelynd@gmail.com';
 
@@ -26,9 +27,8 @@ export default function Login({ user }: { user: User | null }) {
     const checkRedirect = async () => {
       try {
         console.log("Checking for redirect result...");
-        // Set a 10-second timeout for the redirect check
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 10000)
+          setTimeout(() => reject(new Error('Timeout')), 15000)
         );
         
         const result = await Promise.race([
@@ -40,20 +40,18 @@ export default function Login({ user }: { user: User | null }) {
           console.log("Redirect result found:", result.user.email);
           const userEmail = result.user.email?.toLowerCase();
           if (userEmail !== 'orelynd@gmail.com') {
-            setError(`Accès refusé. L'email ${userEmail} n'est pas autorisé.`);
+            setError(`Email non autorisé : ${userEmail}. Veuillez utiliser orelynd@gmail.com`);
             await auth.signOut();
           } else {
             navigate('/admin');
           }
-        } else {
-          console.log("No redirect result found.");
         }
       } catch (err: any) {
         console.error("Redirect check failed:", err);
         if (err.code === 'auth/unauthorized-domain') {
-          setError("Erreur : Domaine non autorisé. Vous devez ajouter 'portfolio-jeanpaul.netlify.app' dans les domaines autorisés de votre console Firebase (Authentification > Paramètres).");
+          setError("Ce domaine n'est pas autorisé dans Firebase. Vérifiez l'onglet 'Authorized domains' dans votre console Firebase.");
         } else if (err.message !== 'Timeout') {
-          setError(`Erreur d'authentification : ${err.code || err.message}`);
+          setError(`Erreur : ${err.code || err.message}`);
         }
       } finally {
         if (isMounted) setRedirectLoading(false);
@@ -68,14 +66,12 @@ export default function Login({ user }: { user: User | null }) {
     setError(null);
     try {
       if (useRedirect) {
-        console.log("Initiating redirect sign-in...");
         await signInWithRedirect(auth, googleProvider);
       } else {
-        console.log("Initiating popup sign-in...");
         const result = await signInWithPopup(auth, googleProvider);
         const userEmail = result.user.email?.toLowerCase();
         if (userEmail !== 'orelynd@gmail.com') {
-          setError(`Accès refusé. L'email ${userEmail} n'est pas autorisé.`);
+          setError(`Email non autorisé : ${userEmail}`);
           await auth.signOut();
         } else {
           navigate('/admin');
@@ -84,10 +80,9 @@ export default function Login({ user }: { user: User | null }) {
     } catch (err: any) {
       console.error("Login failed:", err);
       if (err.code === 'auth/popup-blocked') {
-        setError("La fenêtre de connexion a été bloquée. Veuillez autoriser les popups ou utiliser le mode redirection.");
-        setUseRedirect(true);
+        setError("Popup bloqué. Veuillez autoriser les fenêtres surgissantes.");
       } else if (err.code === 'auth/unauthorized-domain') {
-        setError("Erreur : Domaine non autorisé. Vous devez ajouter 'portfolio-jeanpaul.netlify.app' dans les domaines autorisés de votre console Firebase (Authentification > Paramètres).");
+        setError("Domaine non autorisé. Ajoutez portfolio-jeanpaul.netlify.app dans votre console Firebase.");
       } else {
         setError(`Erreur : ${err.code || err.message}`);
       }
@@ -95,6 +90,8 @@ export default function Login({ user }: { user: User | null }) {
       setLoading(false);
     }
   };
+
+  const firebaseConfig = auth.app.options;
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center px-4">
@@ -162,6 +159,31 @@ export default function Login({ user }: { user: User | null }) {
               >
                 {useRedirect ? "Problème ? Essayer le mode fenêtre" : "Essayer le mode redirection"}
               </button>
+
+              <button
+                onClick={() => setShowDebug(!showDebug)}
+                className="w-full mt-2 py-2 text-[10px] text-gray-600 hover:text-gray-400 transition-colors uppercase tracking-widest"
+              >
+                {showDebug ? "Masquer les diagnostics" : "Diagnostics techniques"}
+              </button>
+
+              {showDebug && (
+                <motion.div 
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  className="mt-4 p-4 bg-black/40 rounded-xl text-left font-mono text-[10px] text-gray-500 border border-white/5 overflow-hidden"
+                >
+                  <p className="text-blue-400 mb-2 font-bold">CONFIGURATION ACTUELLE :</p>
+                  <p><span className="text-gray-400">Project ID:</span> {(firebaseConfig as any).projectId}</p>
+                  <p><span className="text-gray-400">Auth Domain:</span> {(firebaseConfig as any).authDomain}</p>
+                  <p className="mt-2 text-blue-400 mb-2 font-bold">ÉTAT AUTH :</p>
+                  <p><span className="text-gray-400">User:</span> {user ? user.email : 'Non connecté'}</p>
+                  <p><span className="text-gray-400">Admin:</span> {isAdmin ? 'OUI' : 'NON'}</p>
+                  <p className="mt-2 text-yellow-500 italic">
+                    Note : Le Project ID doit correspondre à celui affiché dans votre console Firebase.
+                  </p>
+                </motion.div>
+              )}
             </>
           )}
 
