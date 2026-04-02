@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { User } from 'firebase/auth';
-import { auth, signInWithRedirect, getRedirectResult, googleProvider } from '../firebase';
+import { auth, signInWithRedirect, signInWithPopup, getRedirectResult, googleProvider } from '../firebase';
 import { motion } from 'motion/react';
 import { BarChart3, LogIn, ShieldAlert, Loader2, ChevronRight, ArrowLeft } from 'lucide-react';
 import { Link } from 'react-router-dom';
