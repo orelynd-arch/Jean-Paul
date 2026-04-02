@@ -147,6 +147,11 @@ export default function App() {
       setLoading(false);
     });
 
+    // Safety timeout for loading state
+    const timeout = setTimeout(() => {
+      setLoading(false);
+    }, 8000);
+
     const unsubscribeSettings = onSnapshot(doc(db, 'settings', 'global'), (doc) => {
       if (doc.exists()) {
         setSettings(doc.data() as SiteSettings);
@@ -158,6 +163,7 @@ export default function App() {
     return () => {
       unsubscribeAuth();
       unsubscribeSettings();
+      clearTimeout(timeout);
     };
   }, []);
 

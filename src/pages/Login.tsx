@@ -11,6 +11,7 @@ export default function Login({ user }: { user: User | null }) {
   const [loading, setLoading] = useState(false);
   const [redirectLoading, setRedirectLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [useRedirect, setUseRedirect] = useState(true);
 
   const isAdmin = user?.email?.toLowerCase() === 'orelynd@gmail.com';
 
@@ -21,10 +22,20 @@ export default function Login({ user }: { user: User | null }) {
   }, [user, isAdmin, navigate]);
 
   useEffect(() => {
+    let isMounted = true;
     const checkRedirect = async () => {
       try {
-        const result = await getRedirectResult(auth);
-        if (result) {
+        // Set a 5-second timeout for the redirect check
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Timeout')), 5000)
+        );
+        
+        const result = await Promise.race([
+          getRedirectResult(auth),
+          timeoutPromise
+        ]) as any;
+
+        if (result && isMounted) {
           const userEmail = result.user.email?.toLowerCase();
           if (userEmail !== 'orelynd@gmail.com') {
             setError(`Accès refusé. L'email ${userEmail} n'est pas autorisé.`);
@@ -34,27 +45,41 @@ export default function Login({ user }: { user: User | null }) {
           }
         }
       } catch (err: any) {
-        console.error(err);
-        if (err.code === 'auth/internal-error' || err.code === 'auth/network-request-failed') {
-          setError("Erreur réseau. Veuillez vérifier votre connexion.");
-        } else {
-          setError("Une erreur est survenue lors de la connexion.");
-        }
+        console.warn("Redirect check failed or timed out:", err);
+        // We don't set an error here because it might just be a normal page load
       } finally {
-        setRedirectLoading(false);
+        if (isMounted) setRedirectLoading(false);
       }
     };
     checkRedirect();
+    return () => { isMounted = false; };
   }, [navigate]);
 
   const handleLogin = async () => {
     setLoading(true);
     setError(null);
     try {
-      await signInWithRedirect(auth, googleProvider);
+      if (useRedirect) {
+        await signInWithRedirect(auth, googleProvider);
+      } else {
+        const result = await signInWithPopup(auth, googleProvider);
+        const userEmail = result.user.email?.toLowerCase();
+        if (userEmail !== 'orelynd@gmail.com') {
+          setError(`Accès refusé. L'email ${userEmail} n'est pas autorisé.`);
+          await auth.signOut();
+        } else {
+          navigate('/admin');
+        }
+      }
     } catch (err: any) {
       console.error(err);
-      setError("Une erreur est survenue lors de la connexion.");
+      if (err.code === 'auth/popup-blocked') {
+        setError("La fenêtre de connexion a été bloquée. Veuillez autoriser les popups ou utiliser le mode redirection.");
+        setUseRedirect(true);
+      } else {
+        setError("Une erreur est survenue lors de la connexion.");
+      }
+    } finally {
       setLoading(false);
     }
   };
@@ -114,9 +139,16 @@ export default function Login({ user }: { user: User | null }) {
                 ) : (
                   <>
                     <LogIn className="w-5 h-5" />
-                    Continuer avec Google
+                    {useRedirect ? 'Continuer avec Google' : 'Connexion (Fenêtre)'}
                   </>
                 )}
+              </button>
+
+              <button
+                onClick={() => setUseRedirect(!useRedirect)}
+                className="w-full mt-4 py-2 text-xs text-gray-500 hover:text-gray-300 transition-colors"
+              >
+                {useRedirect ? "Problème ? Essayer le mode fenêtre" : "Essayer le mode redirection"}
               </button>
             </>
           )}
