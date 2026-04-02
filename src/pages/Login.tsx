@@ -25,9 +25,10 @@ export default function Login({ user }: { user: User | null }) {
     let isMounted = true;
     const checkRedirect = async () => {
       try {
-        // Set a 5-second timeout for the redirect check
+        console.log("Checking for redirect result...");
+        // Set a 10-second timeout for the redirect check
         const timeoutPromise = new Promise((_, reject) => 
-          setTimeout(() => reject(new Error('Timeout')), 5000)
+          setTimeout(() => reject(new Error('Timeout')), 10000)
         );
         
         const result = await Promise.race([
@@ -36,6 +37,7 @@ export default function Login({ user }: { user: User | null }) {
         ]) as any;
 
         if (result && isMounted) {
+          console.log("Redirect result found:", result.user.email);
           const userEmail = result.user.email?.toLowerCase();
           if (userEmail !== 'orelynd@gmail.com') {
             setError(`Accès refusé. L'email ${userEmail} n'est pas autorisé.`);
@@ -43,10 +45,16 @@ export default function Login({ user }: { user: User | null }) {
           } else {
             navigate('/admin');
           }
+        } else {
+          console.log("No redirect result found.");
         }
       } catch (err: any) {
-        console.warn("Redirect check failed or timed out:", err);
-        // We don't set an error here because it might just be a normal page load
+        console.error("Redirect check failed:", err);
+        if (err.code === 'auth/unauthorized-domain') {
+          setError("Erreur : Domaine non autorisé. Vous devez ajouter 'portfolio-jeanpaul.netlify.app' dans les domaines autorisés de votre console Firebase (Authentification > Paramètres).");
+        } else if (err.message !== 'Timeout') {
+          setError(`Erreur d'authentification : ${err.code || err.message}`);
+        }
       } finally {
         if (isMounted) setRedirectLoading(false);
       }
@@ -60,8 +68,10 @@ export default function Login({ user }: { user: User | null }) {
     setError(null);
     try {
       if (useRedirect) {
+        console.log("Initiating redirect sign-in...");
         await signInWithRedirect(auth, googleProvider);
       } else {
+        console.log("Initiating popup sign-in...");
         const result = await signInWithPopup(auth, googleProvider);
         const userEmail = result.user.email?.toLowerCase();
         if (userEmail !== 'orelynd@gmail.com') {
@@ -72,12 +82,14 @@ export default function Login({ user }: { user: User | null }) {
         }
       }
     } catch (err: any) {
-      console.error(err);
+      console.error("Login failed:", err);
       if (err.code === 'auth/popup-blocked') {
         setError("La fenêtre de connexion a été bloquée. Veuillez autoriser les popups ou utiliser le mode redirection.");
         setUseRedirect(true);
+      } else if (err.code === 'auth/unauthorized-domain') {
+        setError("Erreur : Domaine non autorisé. Vous devez ajouter 'portfolio-jeanpaul.netlify.app' dans les domaines autorisés de votre console Firebase (Authentification > Paramètres).");
       } else {
-        setError("Une erreur est survenue lors de la connexion.");
+        setError(`Erreur : ${err.code || err.message}`);
       }
     } finally {
       setLoading(false);
